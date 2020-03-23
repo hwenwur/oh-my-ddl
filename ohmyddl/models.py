@@ -6,19 +6,7 @@ import pickle
 from datetime import datetime
 import time
 from typing import List, Dict, Tuple
-
-
-def extract_string(source, start):
-    """从source中提取第一个以start开头的字符串（单引号或双引号包围的）。
-    """
-    s = source.index(start)
-    quote = source[s - 1]
-    if quote == "'" or quote == '"':
-        temp = source[s:]
-        e = temp.index(quote)
-        return temp[:e]
-    else:
-        raise ValueError
+from .utils import extract_string
 
 
 WorkInfo = namedtuple("WorkInfo", ["workName", "startTime", "endTime", "workStatus"])
