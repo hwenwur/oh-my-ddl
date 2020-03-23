@@ -95,9 +95,9 @@ class ChaoxingUser:
                 "login_submit": "登录/Login"
             }
             r = self.http_post("https://oauth.shu.edu.cn/login", data=form)
-            assert r.url.startswith("http://www.elearning.shu.edu.cn/sso/logind")
+            assert r.url.startswith("http://www.elearning.shu.edu.cn/sso/logind"), f"unexpected url(2): {r.url}"
         else:
-            error = f"login failed. unexpected r.url: {r.url}"
+            error = f"login failed. unexpected url(1): {r.url}"
             self._logger.critical(error)
             raise RuntimeError(error)
 
@@ -115,7 +115,7 @@ class ChaoxingUser:
             if name == "fid":
                 fid = value
         r = self.http_post(request_url, data=data)
-        assert r.url == "http://www.elearning.shu.edu.cn/portal"
+        assert r.url == "http://www.elearning.shu.edu.cn/portal", f"unexpected url(3): {r.url}"
 
         # step 4
         params = {"fid": fid}

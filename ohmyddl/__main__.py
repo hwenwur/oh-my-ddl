@@ -23,13 +23,14 @@ def solve_account(relogin=False) -> ChaoxingUser:
         password = getpass("密码：")
         if len(username) != 8:
             print("学号错误")
-            exit(0)
+            exit(1)
         user = ChaoxingUser(username, password)
     try:
         user.login()
         print("登录成功")
     except Exception as e:
         print(f"登录失败：{e}")
+        exit(1)
     return user
 
 
