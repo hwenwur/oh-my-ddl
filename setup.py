@@ -11,6 +11,7 @@ setuptools.setup(
     author_email="pypi@qiren.org",
     description="A tool to collect deadline in SHU.",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://github.com/hwenwur/oh-my-ddl",
     packages=setuptools.find_packages(),
     classifiers=[
