@@ -1,8 +1,7 @@
 from .models import ChaoxingUser, WorkInfo, CourseInfo
-from .utils import get_course_alias
+from .utils import get_course_alias, table
 from pathlib import Path
 from getpass import getpass
-from tabulate import tabulate
 from datetime import datetime
 import argparse
 import logging
@@ -68,7 +67,7 @@ def main():
             ])
     temp.sort(key=lambda x: x[1].timestamp() if isinstance(x[1], datetime) else 0x7fffffff)
     print(f"当前学号：{user.userName}")
-    print(tabulate(temp, headers=["名称", "截止时间"], tablefmt="psql"))
+    print(table(temp, ["名称", "截止时间"]))
     print()
     if len(no_work_course) != 0:
         print(f"{'、'.join(no_work_course)}没有未完成作业。")

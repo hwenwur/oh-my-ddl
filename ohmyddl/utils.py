@@ -1,3 +1,10 @@
+from typing import List
+from io import StringIO
+
+
+# ---------------------------------------------
+
+
 alias_table = {
     "毛泽东思想和中国特色社会主义理论体系概论*": "毛概",
     "马克思主义基本原理概论*": "马原",
@@ -23,6 +30,9 @@ def get_course_alias(course_name: str):
     return course_name
 
 
+# ----------------------------------------------
+
+
 def extract_string(source, start):
     """从source中提取第一个以start开头的字符串（单引号或双引号包围的）。
     """
@@ -34,3 +44,88 @@ def extract_string(source, start):
         return temp[:e]
     else:
         raise ValueError
+
+
+# -----------------------------------------------
+
+
+def display_length(content):
+    """中文单字长度计为2
+    """
+    content = str(content)
+    length = len(content)
+    for x in content:
+        if 0x4e00 <= ord(x) <= 0x9fa5:
+            length += 1
+    return length
+
+
+def print_width(stream: StringIO, content, width: int, align=0):
+    content = str(content)
+    content_len = display_length(content)
+    if content_len <= width:
+        a = (width - content_len) // 2
+        if align == 0:
+            # 居中
+            stream.write(" " * a)
+            stream.write(content)
+            stream.write(" " * a)
+        elif align == -1:
+            # 左对齐
+            stream.write(content)
+            stream.write(" " * a * 2)
+        elif align == 1:
+            # 右对齐
+            stream.write(" " * a * 2)
+            stream.write(content)
+        real_width = a * 2 + display_length(content)
+        padding = width - real_width
+        if padding > 0:
+            stream.write(" " * padding)
+    else:
+        print(f"WARN content={content},length={content_len},width={width}")
+        stream.write(content)
+
+
+def table(data: List[List[str]], header: List[str]):
+    col_max_len = [display_length(x) for x in header]
+    for row in data:
+        for i, col in enumerate(row):
+            if display_length(col) > col_max_len[i]:
+                col_max_len[i] = display_length(col)
+    col_max_len = [2 + x for x in col_max_len]
+    out = StringIO()
+    # line 1
+    out.write("+")
+    for x in col_max_len:
+        out.write("-" * x)
+        out.write("+")
+    out.write("\n")
+    # line 2
+    out.write("|")
+    for i, h in enumerate(header):
+        print_width(out, h, col_max_len[i])
+        out.write("|")
+    out.write("\n")
+    # lin 3
+    out.write("|")
+    for x in col_max_len:
+        out.write("-" * x)
+        out.write("+")
+    out.seek(out.tell() - 1)
+    out.write("|\n")
+    # line [4,len - 1)
+    for row in data:
+        out.write("|")
+        for i, col in enumerate(row):
+            print_width(out, col, col_max_len[i], align=-1)
+            out.write("|")
+        out.write("\n")
+    # line len - 1, (the last line.)
+    out.write("+")
+    for x in col_max_len:
+        out.write("-" * x)
+        out.write("+")
+    out.write("\n")
+
+    return out.getvalue()
