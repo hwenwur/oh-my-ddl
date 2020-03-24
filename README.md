@@ -36,7 +36,7 @@ ohmyddl -h
 
 如果提示找不到命令可将上述 `ohmyddl` 替换成 `python -m ohmyddl` 。
 
-必要的时候使用 `pip3` 和 `python3` 而不是 `pip` ,  `python3`。
+必要的时候使用 `pip3` 和 `python3` 而不是 `pip` ,  `python`。
 
 ## 反馈
 
