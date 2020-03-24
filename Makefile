@@ -9,4 +9,5 @@ tar:
 clean:
 	find . -type f -name '*.py[co]' -delete
 	find . -type d -name '__pycache__' -delete
-	rm -f dist.tar
+	rm -f source.tar
+	rm -rf build dist *.egg-info

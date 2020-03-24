@@ -68,7 +68,7 @@ def main():
             ])
     temp.sort(key=lambda x: x[1].timestamp() if isinstance(x[1], datetime) else 0x7fffffff)
     print(f"当前学号：{user.userName}")
-    print(tabulate(temp, headers=["名称", "截止时间"]))
+    print(tabulate(temp, headers=["名称", "截止时间"], tablefmt="psql"))
     print()
     if len(no_work_course) != 0:
         print(f"{'、'.join(no_work_course)}没有未完成作业。")
