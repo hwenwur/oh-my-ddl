@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as file:
     long_description = file.read()
 
 setuptools.setup(
-    name="oh-my-ddl-shu",
+    name="ohmyddl",
     version="0.1",
     author="hwenwur",
     author_email="pypi@qiren.org",
