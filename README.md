@@ -5,7 +5,7 @@
 ### 安装
 python版本：3.7+
 ```bash
-pip install oh-my-ddl-shu --user
+pip install ohmyddl --user
 ```
 ### 运行
 - Windows
