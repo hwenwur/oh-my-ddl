@@ -1,5 +1,5 @@
 run:
-	python -m ohmyddl
+	python -m ohmyddl -v
 
 
 tar:

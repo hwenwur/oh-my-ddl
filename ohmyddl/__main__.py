@@ -7,6 +7,11 @@ import argparse
 import logging
 
 
+HOME_DIR = Path.home()
+DATA_FILE = HOME_DIR / ".ohmyddl" / ".user_data"
+logger = logging.getLogger(__name__)
+
+
 def setup_logging(level=logging.ERROR):
     root = logging.getLogger()
     root.addHandler(logging.StreamHandler())
@@ -14,9 +19,9 @@ def setup_logging(level=logging.ERROR):
 
 
 def solve_account(relogin=False) -> ChaoxingUser:
-    cache_file = ".user_data"
-    if (not relogin) and Path(cache_file).exists():
-        user = ChaoxingUser.load_from(cache_file)
+    if (not relogin) and DATA_FILE.exists():
+        logging.debug(f"read config from {DATA_FILE}")
+        user = ChaoxingUser.load_from(str(DATA_FILE))
     else:
         username = input("学号：")
         password = getpass("密码：")
@@ -31,6 +36,12 @@ def solve_account(relogin=False) -> ChaoxingUser:
         print(f"登录失败：{e}")
         exit(1)
     return user
+
+
+def save_user_data(user):
+    parent = DATA_FILE.parent
+    parent.mkdir(exist_ok=True)
+    user.dump_to(str(DATA_FILE))
 
 
 def main():
@@ -71,7 +82,7 @@ def main():
     print()
     if len(no_work_course) != 0:
         print(f"{'、'.join(no_work_course)}没有未完成作业。")
-    user.dump_to(".user_data")
+    save_user_data(user)
 
 
 if __name__ == "__main__":
