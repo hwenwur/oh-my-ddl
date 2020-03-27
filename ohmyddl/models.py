@@ -120,6 +120,37 @@ class ChaoxingUser:
         # step 4
         params = {"fid": fid}
         self.http_get("http://www.elearning.shu.edu.cn/setcookie.jsp", params=params)
+    
+    def get_term_id_list(self, use_cache=True) -> List[Tuple[int, str]]:
+        """获取学期id
+        @return [(20193, "2019-2020学年春季学期"), (20192, "2019-2020学年秋季学期"), ...]
+        """
+        if use_cache and (t := self._read_cache("term_id_list")):
+            self._logger.info("get_term_id_list use cache value.")
+            return t
+        # step 1 获取请求url
+        r = self.http_get("http://i.mooc.elearning.shu.edu.cn/space/index.shtml", referer="http://www.elearning.shu.edu.cn/portal")
+        url = extract_string(r.text, "http://www.elearning.shu.edu.cn/courselist/study?s=")
+        self._logger.info(f"get_term_id_list request url: {url}")
+        # step 2
+        result = list()
+        r = self.http_get(url)
+        html = lxml.etree.HTML(r.text)
+        term_list_li = html.xpath("//ul[@class='zse_ul']/li[@class='zse_li']/a")
+        for x in term_list_li:
+            year = x.xpath("@data_year")[0]
+            term = x.xpath("@data_term")[0]
+            comment = x.text.strip()
+            try:
+                term_id = int(year + term)
+            except ValueError as e:
+                self._logger.error(f"term_id转换错误：{e}, 略过：{comment}")
+                term_id = -2
+            result.append((term_id, comment))
+        result.sort(key=lambda x: x[0], reverse=True)
+        self._logger.info(f"term_id: {result}")
+        self._write_cache("term_id_list", result)
+        return result
 
     def get_course_list(self, use_cache=True) -> List[CourseInfo]:
         """获取课程列表
