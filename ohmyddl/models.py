@@ -125,7 +125,8 @@ class ChaoxingUser:
         """获取学期id
         @return [(20193, "2019-2020学年春季学期"), (20192, "2019-2020学年秋季学期"), ...]
         """
-        if t := self._read_cache("term_id_list", expire_time=use_cache):
+        cache_key = "term_id_list"
+        if t := self._read_cache(cache_key, expire_time=use_cache):
             self._logger.info("get_term_id_list use cache value.")
             return t
         # step 1 获取请求url
@@ -149,14 +150,17 @@ class ChaoxingUser:
             result.append((term_id, comment))
         result.sort(key=lambda x: x[0], reverse=True)
         self._logger.info(f"term_id: {result}")
-        self._write_cache("term_id_list", result)
+        self._write_cache(cache_key, result)
         return result
 
-    def get_course_list(self, use_cache=600) -> List[CourseInfo]:
+    def get_course_list(self, term_id: int=-1, use_cache: int=600) -> List[CourseInfo]:
         """获取课程列表
+        @params term_id 学期ID，-1表示当前学期, 0表示所有课程。20193表示2019-2020春季学期。
+
         @return [CourseInfo(pageUrl='', courseName='', teacherName='', courseSeq=''), ...]
         """
-        if t := self._read_cache("course_list", expire_time=use_cache):
+        cache_key = "course_list_" + str(term_id)
+        if t := self._read_cache(cache_key, expire_time=use_cache):
             self._logger.info("get_course_list use cache value.")
             return t
         # step 1 获取请求url
@@ -165,7 +169,23 @@ class ChaoxingUser:
         self._logger.info(f"get_course_list request url: {url}")
 
         # step 2
-        r = self.http_get(url)
+        term_id_list = self.get_term_id_list()
+        request_data = {
+            "year": "0",
+            "term": "0",
+            "showContent": "000"
+        }
+        if term_id == -1:
+            term_id = term_id_list[0][0]
+        if term_id // 10000 == 2:
+            request_data["year"] = str(term_id // 10)
+            request_data["term"] = str(term_id % 10)
+        elif term_id != 0:
+            self._logger.error(f"invalid term_id: {term_id}")
+            raise ValueError(f"invalid term_id: {term_id}")
+        self._logger.debug(f"get_course_list term_id: {term_id}")
+
+        r = self.http_get(url, params=request_data)
         html = lxml.etree.HTML(r.text)
         courses = html.xpath("//li[contains(@class, 'zmy_item')]")
         course_list = list()
@@ -176,14 +196,15 @@ class ChaoxingUser:
                 teacherName=c.xpath("dl/dd[@name='userNameHtml']")[0].text.strip(),
                 courseSeq=c.xpath("dl/dt/span/text()")[0].strip()[1:-1]
             ))
-        self._write_cache("course_list", course_list)
+        self._write_cache(cache_key, course_list)
         return course_list
 
     def get_work_list(self, page_url, use_cache=600) -> List[WorkInfo]:
         """获取作业列表
         """
         # 注意此处：如果缓存结果为 [] 的话，也应该使用。
-        if (t := self._read_cache("work_list_" + page_url, expire_time=use_cache)) is not None:
+        cache_key = "work_list_" + page_url
+        if (t := self._read_cache(cache_key, expire_time=use_cache)) is not None:
             self._logger.info("get_work_list use cache value")
             return t
         result = list()
@@ -211,7 +232,7 @@ class ChaoxingUser:
                 endTime=endTime,
                 workStatus=workStatus
             ))
-        self._write_cache("work_list_" + page_url, result)
+        self._write_cache(cache_key, result)
         return result
 
     def dump_to(self, file_path):

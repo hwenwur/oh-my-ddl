@@ -129,3 +129,15 @@ def table(data: List[List[str]], header: List[str]):
     out.write("\n")
 
     return out.getvalue()
+
+# -----------------------------------------------
+
+def fetch_term_desc(term_id_list, term_id):
+    if term_id == -1:
+        return term_id_list[0][1]
+    elif term_id:
+        return "不限"
+    for term in term_id_list:
+        if term[0] == term_id:
+            return term[1]
+    return "未知"
