@@ -121,11 +121,11 @@ class ChaoxingUser:
         params = {"fid": fid}
         self.http_get("http://www.elearning.shu.edu.cn/setcookie.jsp", params=params)
 
-    def get_course_list(self, useCache=True) -> List[CourseInfo]:
+    def get_course_list(self, use_cache=True) -> List[CourseInfo]:
         """获取课程列表
         @return [CourseInfo(pageUrl='', courseName='', teacherName='', courseSeq=''), ...]
         """
-        if useCache:
+        if use_cache:
             cache = self._read_cache("course_list")
             if cache is not None:
                 self._logger.info("get_course_list use cache value.")
@@ -150,10 +150,10 @@ class ChaoxingUser:
         self._write_cache("course_list", course_list)
         return course_list
 
-    def get_work_list(self, page_url, useCache=True) -> List[WorkInfo]:
+    def get_work_list(self, page_url, use_cache=True) -> List[WorkInfo]:
         """获取作业列表
         """
-        if useCache:
+        if use_cache:
             cache = self._read_cache("work_list_" + page_url)
             if cache is not None:
                 self._logger.info("get_work_list use cache value")
