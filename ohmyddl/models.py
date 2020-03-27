@@ -121,11 +121,11 @@ class ChaoxingUser:
         params = {"fid": fid}
         self.http_get("http://www.elearning.shu.edu.cn/setcookie.jsp", params=params)
     
-    def get_term_id_list(self, use_cache=True) -> List[Tuple[int, str]]:
+    def get_term_id_list(self, use_cache=600) -> List[Tuple[int, str]]:
         """获取学期id
         @return [(20193, "2019-2020学年春季学期"), (20192, "2019-2020学年秋季学期"), ...]
         """
-        if use_cache and (t := self._read_cache("term_id_list")):
+        if t := self._read_cache("term_id_list", expire_time=use_cache):
             self._logger.info("get_term_id_list use cache value.")
             return t
         # step 1 获取请求url
@@ -152,15 +152,13 @@ class ChaoxingUser:
         self._write_cache("term_id_list", result)
         return result
 
-    def get_course_list(self, use_cache=True) -> List[CourseInfo]:
+    def get_course_list(self, use_cache=600) -> List[CourseInfo]:
         """获取课程列表
         @return [CourseInfo(pageUrl='', courseName='', teacherName='', courseSeq=''), ...]
         """
-        if use_cache:
-            cache = self._read_cache("course_list")
-            if cache is not None:
-                self._logger.info("get_course_list use cache value.")
-                return cache
+        if t := self._read_cache("course_list", expire_time=use_cache):
+            self._logger.info("get_course_list use cache value.")
+            return t
         # step 1 获取请求url
         r = self.http_get("http://i.mooc.elearning.shu.edu.cn/space/index.shtml", referer="http://www.elearning.shu.edu.cn/portal")
         url = extract_string(r.text, "http://www.elearning.shu.edu.cn/courselist/study?s=")
@@ -181,14 +179,13 @@ class ChaoxingUser:
         self._write_cache("course_list", course_list)
         return course_list
 
-    def get_work_list(self, page_url, use_cache=True) -> List[WorkInfo]:
+    def get_work_list(self, page_url, use_cache=600) -> List[WorkInfo]:
         """获取作业列表
         """
-        if use_cache:
-            cache = self._read_cache("work_list_" + page_url)
-            if cache is not None:
-                self._logger.info("get_work_list use cache value")
-                return cache
+        # 注意此处：如果缓存结果为 [] 的话，也应该使用。
+        if (t := self._read_cache("work_list_" + page_url, expire_time=use_cache)) is not None:
+            self._logger.info("get_work_list use cache value")
+            return t
         result = list()
         r = self.http_get(page_url)
         # step 1 获取url

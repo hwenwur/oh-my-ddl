@@ -56,10 +56,12 @@ def main():
         setup_logging()
     
     user = solve_account(relogin=args.c)
-    course_list = user.get_course_list(use_cache=(not args.f))
+    use_cache = -1 if args.f else user.CACHE_EXPIRE_TIME
+    logger.info(f"use_cache: {use_cache}")
+    course_list = user.get_course_list(use_cache=use_cache)
     work_list = dict()
     for course in course_list:
-        works = user.get_work_list(course.pageUrl, use_cache=(not args.f))
+        works = user.get_work_list(course.pageUrl, use_cache=use_cache)
         work_list[course.courseName] = works
     
     no_work_course = list()
