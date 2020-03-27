@@ -68,7 +68,7 @@ def main():
         work_list[course.courseName] = works
     
     no_work_course = list()
-    temp = list()
+    tab_content = list()
     for course_name in work_list.keys():
         course_alias = get_course_alias(course_name)
         works = work_list[course_name]
@@ -77,14 +77,14 @@ def main():
             no_work_course.append(course_alias)
             continue
         for work in unfinish_works:
-            temp.append([
+            tab_content.append([
                 course_alias + "-" + work.workName, 
                 work.endTime if work.endTime is not None else "未知"
             ])
-    temp.sort(key=lambda x: x[1].timestamp() if isinstance(x[1], datetime) else 0x7fffffff)
+    tab_content.sort(key=lambda x: x[1].timestamp() if isinstance(x[1], datetime) else 0x7fffffff)
     print(f"当前学号：{user.userName}")
     print(f"当前学期：{fetch_term_desc(term_id_list, term_id)}")
-    print(table(temp, ["名称", "截止时间"]))
+    print(table(tab_content, ["名称", "截止时间"]))
     print()
     if len(no_work_course) != 0:
         print(f"{'、'.join(no_work_course)}没有未完成作业。")
