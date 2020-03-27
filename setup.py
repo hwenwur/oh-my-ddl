@@ -1,4 +1,5 @@
 import setuptools
+import ohmyddl
 
 
 with open("README.md", "r", encoding="utf-8") as file:
@@ -6,7 +7,7 @@ with open("README.md", "r", encoding="utf-8") as file:
 
 setuptools.setup(
     name="ohmyddl",
-    version="0.1",
+    version=ohmyddl.__version__,
     author="hwenwur",
     author_email="pypi@qiren.org",
     description="A tool to collect deadline in SHU.",
