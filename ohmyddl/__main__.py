@@ -3,6 +3,7 @@ from .utils import get_course_alias, table, fetch_term_desc
 from pathlib import Path
 from getpass import getpass
 from datetime import datetime
+import sys
 import argparse
 import logging
 
@@ -46,7 +47,8 @@ def save_user_data(user):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="超星学习通作业汇总。", prog="ohmyddl")
+    prog = "ohmyddl.exe" if sys.platform == "win32" else "ohmyddl"
+    parser = argparse.ArgumentParser(description="超星学习通作业汇总。", prog=prog)
     parser.add_argument("-c", help="不使用已保存学号", action="store_true")
     parser.add_argument("-f", help="强制刷新（若10分钟内查询过，会优先使用缓存的数据）", action="store_true")
     parser.add_argument("-t", help="学期ID，默认使用当前学期。格式：20192表示2019冬季学期。", type=int)
