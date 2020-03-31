@@ -1,13 +1,14 @@
-import requests
 import logging
-import lxml.etree
-from collections import namedtuple
 import pickle
-from datetime import datetime
 import time
-from typing import List, Dict, Tuple
-from .utils import extract_string
+from collections import namedtuple
+from datetime import datetime
+from typing import Dict, List, Tuple
 
+import lxml.etree
+import requests
+
+from .utils import extract_string
 
 WorkInfo = namedtuple("WorkInfo", ["workName", "startTime", "endTime", "workStatus"])
 CourseInfo = namedtuple("CourseInfo", ["pageUrl", "courseName", "teacherName", "courseSeq"])

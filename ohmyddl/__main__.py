@@ -1,12 +1,12 @@
-from .models import ChaoxingUser, WorkInfo, CourseInfo
-from .utils import get_course_alias, table, fetch_term_desc
-from pathlib import Path
-from getpass import getpass
-from datetime import datetime
-import sys
 import argparse
 import logging
+import sys
+from datetime import datetime
+from getpass import getpass
+from pathlib import Path
 
+from .models import ChaoxingUser, CourseInfo, WorkInfo
+from .utils import fetch_term_desc, get_course_alias, table
 
 DATA_DIR = Path.home() / ".ohmyddl"
 DATA_FILE = DATA_DIR / ".user_data"
