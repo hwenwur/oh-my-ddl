@@ -241,6 +241,19 @@ class ChaoxingUser:
         self._write_cache(cache_key, result)
         return result
 
+    def get_unfinish_work_list(self, term_id=-1, use_cache=600):
+        """获取未完成作业。即状态为：待做
+        @return [(CourseInfo, [WorkInfo, ...]), ...]
+        """
+        course_list = self.get_course_list(term_id=term_id, use_cache=use_cache)
+        result = list()
+        for course in course_list:
+            work_list = self.get_work_list(course.pageUrl, use_cache=use_cache)
+            unfinish_works = [x for x in work_list if x.workStatus == "待做"]
+            if unfinish_works:
+                result.append((course, unfinish_works))
+        return result
+
     def dump_to(self, file_path):
         self._logger.debug(f"dump object to {file_path}")
         with open(file_path, "wb") as f:
