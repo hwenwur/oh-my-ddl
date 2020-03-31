@@ -7,6 +7,8 @@ from pathlib import Path
 
 from .models import ChaoxingUser, CourseInfo, WorkInfo
 from .utils import fetch_term_desc, get_course_alias, table
+from .exceptions import PasswordError
+
 
 DATA_DIR = Path.home() / ".ohmyddl"
 DATA_FILE = DATA_DIR / ".user_data"
@@ -30,6 +32,11 @@ def solve_account(relogin=False) -> ChaoxingUser:
             print("学号错误")
             exit(1)
         user = ChaoxingUser(username, password)
+        try:
+            user.login()
+        except PasswordError:
+            print("学号或密码错误")
+            exit(0)
     try:
         if not user.is_login:
             user.login()

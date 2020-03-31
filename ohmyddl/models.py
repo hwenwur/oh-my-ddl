@@ -9,6 +9,8 @@ import lxml.etree
 import requests
 
 from .utils import extract_string
+from .exceptions import PasswordError, LoginFailedError
+
 
 WorkInfo = namedtuple("WorkInfo", ["workName", "startTime", "endTime", "workStatus"])
 CourseInfo = namedtuple("CourseInfo", ["pageUrl", "courseName", "teacherName", "courseSeq"])
@@ -76,11 +78,8 @@ class ChaoxingUser:
         r = self.http_get("http://www.elearning.shu.edu.cn/topjs?index=1")
         if "afterLogin" in r.text:
             return True
-        elif "beforLogin" in r.text:
-            return False
         else:
-            self._logger.error(f"无法判断登录状态。status_code:{r.status_code},text:\n{r.text}")
-            raise RuntimeError("无法判断登录状态")
+            return False
 
     def login(self):
         # step 1
@@ -96,11 +95,15 @@ class ChaoxingUser:
                 "login_submit": "登录/Login"
             }
             r = self.http_post("https://oauth.shu.edu.cn/login", data=form)
-            assert r.url.startswith("http://www.elearning.shu.edu.cn/sso/logind"), f"unexpected url(2): {r.url}"
+            if "认证失败" in r.text:
+                raise PasswordError
+
+            if not r.url.startswith("http://www.elearning.shu.edu.cn/sso/logind"):
+                raise LoginFailedError(2, f"unexpected url(2): {r.url}")
         else:
             error = f"login failed. unexpected url(1): {r.url}"
             self._logger.critical(error)
-            raise RuntimeError(error)
+            raise LoginFailedError(1, error)
 
         # step 3
         # r.url start with http://www.elearning.shu.edu.cn/sso/logind
@@ -116,7 +119,9 @@ class ChaoxingUser:
             if name == "fid":
                 fid = value
         r = self.http_post(request_url, data=data)
-        assert r.url == "http://www.elearning.shu.edu.cn/portal", f"unexpected url(3): {r.url}"
+
+        if r.url != "http://www.elearning.shu.edu.cn/portal":
+            raise LoginFailedError(3, f"unexpected url(3): {r.url}")
 
         # step 4
         params = {"fid": fid}
