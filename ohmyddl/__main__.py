@@ -8,9 +8,9 @@ from pathlib import Path
 from .models import ChaoxingUser, CourseInfo, WorkInfo
 from .utils import fetch_term_desc, get_course_alias, table
 from .exceptions import PasswordError
+from . import DATA_DIR
 
 
-DATA_DIR = Path.home() / ".ohmyddl"
 DATA_FILE = DATA_DIR / ".user_data"
 logger = logging.getLogger(__name__)
 
