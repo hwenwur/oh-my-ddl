@@ -30,7 +30,8 @@ def solve_account(relogin=False) -> ChaoxingUser:
             exit(1)
         user = ChaoxingUser(username, password)
     try:
-        user.login()
+        if not user.is_login:
+            user.login()
         print("登录成功")
     except Exception as e:
         print(f"登录失败：{e}")
