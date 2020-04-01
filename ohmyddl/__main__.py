@@ -5,11 +5,10 @@ from datetime import datetime
 from getpass import getpass
 from pathlib import Path
 
+from . import DATA_DIR
+from .exceptions import PasswordError
 from .models import ChaoxingUser, CourseInfo, WorkInfo
 from .utils import fetch_term_desc, get_course_alias, table
-from .exceptions import PasswordError
-from . import DATA_DIR
-
 
 DATA_FILE = DATA_DIR / ".user_data"
 logger = logging.getLogger(__name__)
@@ -57,26 +56,29 @@ def main():
     prog = "ohmyddl.exe" if sys.platform == "win32" else "ohmyddl"
     parser = argparse.ArgumentParser(description="超星学习通作业汇总。", prog=prog)
     parser.add_argument("-c", help="不使用已保存学号", action="store_true")
-    parser.add_argument("-f", help="强制刷新（若10分钟内查询过，会优先使用缓存的数据）", action="store_true")
-    parser.add_argument("-t", help="学期ID，默认使用当前学期。格式：20192表示2019冬季学期。", type=int)
+    parser.add_argument(
+        "-f", help="强制刷新（若10分钟内查询过，会优先使用缓存的数据）", action="store_true")
+    parser.add_argument(
+        "-t", help="学期ID，默认使用当前学期。格式：20192表示2019冬季学期。", type=int)
     parser.add_argument("-v", help="输出调试信息", action="store_true")
     args = parser.parse_args()
     if args.v:
         setup_logging(logging.DEBUG)
     else:
         setup_logging()
-    
+
     user = solve_account(relogin=args.c)
     term_id = args.t if args.t else -1
-    term_id_list = user.get_term_id_list()
-    use_cache = -1 if args.f else user.CACHE_EXPIRE_TIME
-    logger.info(f"use_cache: {use_cache}")
-    course_list = user.get_course_list(term_id=term_id,use_cache=use_cache)
+    disable_cache = args.f
+    logger.info(f"disable_cache: {disable_cache}")
+    term_id_list = user.get_term_id_list(disable_cache=disable_cache)
+    course_list = user.get_course_list(
+        term_id=term_id, disable_cache=disable_cache)
     work_list = dict()
     for course in course_list:
-        works = user.get_work_list(course.pageUrl, use_cache=use_cache)
+        works = user.get_work_list(course.pageUrl, disable_cache=disable_cache)
         work_list[course.courseName] = works
-    
+
     no_work_course = list()
     tab_content = list()
     for course_name in work_list.keys():
@@ -88,7 +90,7 @@ def main():
             continue
         for work in unfinish_works:
             tab_content.append([
-                course_alias + "-" + work.workName, 
+                course_alias + "-" + work.workName,
                 work.endTime if work.endTime is not None else "未知"
             ])
     tab_content.sort(key=lambda x: x[1].timestamp() if isinstance(x[1], datetime) else 0x7fffffff)

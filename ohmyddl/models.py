@@ -1,19 +1,63 @@
+import functools
 import logging
 import pickle
 import time
 from collections import namedtuple
 from datetime import datetime
+from inspect import getfullargspec
 from typing import Dict, List, Tuple
 
 import lxml.etree
 import requests
 
+from .exceptions import LoginFailedError, PasswordError
 from .utils import extract_string
-from .exceptions import PasswordError, LoginFailedError
+
+WorkInfo = namedtuple(
+    "WorkInfo", ["workName", "startTime", "endTime", "workStatus"])
+CourseInfo = namedtuple(
+    "CourseInfo", ["pageUrl", "courseName", "teacherName", "courseSeq"])
 
 
-WorkInfo = namedtuple("WorkInfo", ["workName", "startTime", "endTime", "workStatus"])
-CourseInfo = namedtuple("CourseInfo", ["pageUrl", "courseName", "teacherName", "courseSeq"])
+def cache(expire_time):
+    """缓存函数返回值。在expire_time时间内重复调用某个函数（且str(参数)相同）会使用上次的返回值。
+    @expire_time 缓存过期时间，单位：秒。
+
+    例子：\n
+    @cache(60)\n
+    def get_val(x, y, z):
+        # something
+        time.sleep(1)
+        return [x, y, z]
+    如果在60s内，重复调用该函数，并且x,y,z值相同的情况下，会直接使用上次运行的返回值。
+
+    在上述例子中，执行10次get_val(1, 2, 3)只消耗约1秒时间。
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrap(self, *vargs, **kwargs):
+            if "disable_cache" in kwargs.keys():
+                disable_cache = kwargs["disable_cache"]
+            else:
+                disable_cache = False
+            key = func.__name__
+            for x in vargs:
+                key += str(x)
+            for x in kwargs.keys():
+                key += str(x)
+                key += str(kwargs[x])
+            cache = self._read_cache(key, expire_time=expire_time)
+            if (not disable_cache) and (cache is not None):
+                self._logger.debug(f"{func.__name__} 使用缓存值。key: {key}")
+                return cache
+            else:
+                self._logger.debug(f"call {func.__name__}...")
+                r = func(self, *vargs, **kwargs)
+                self._write_cache(key, r)
+                return r
+        wrap.origin = func
+        return wrap
+    return decorator
 
 
 class ChaoxingUser:
@@ -31,7 +75,7 @@ class ChaoxingUser:
         self.session = requests.Session()
         self.session.headers.update(self.HTTP_HEADERS)
         self._logger = logging.getLogger(__name__)
-        self._cache_table : Dict[str, Tuple[List, float]]= dict()
+        self._cache_table: Dict[str, Tuple[List, float]] = dict()
 
     def http_request(self, url, method, params=None, data=None, referer=None, auto_retry=3) -> requests.models.Response:
         session = self.session
@@ -83,7 +127,8 @@ class ChaoxingUser:
 
     def login(self):
         # step 1
-        r = self.http_get("http://shu.fysso.chaoxing.com/sso/shu", referer="http://www.elearning.shu.edu.cn/portal")
+        r = self.http_get("http://shu.fysso.chaoxing.com/sso/shu",
+                          referer="http://www.elearning.shu.edu.cn/portal")
         if r.url.startswith("http://www.elearning.shu.edu.cn/sso/logind"):
             self._logger.debug("use oauth to login")
         elif r.url == "https://oauth.shu.edu.cn/login":
@@ -125,25 +170,26 @@ class ChaoxingUser:
 
         # step 4
         params = {"fid": fid}
-        self.http_get("http://www.elearning.shu.edu.cn/setcookie.jsp", params=params)
-    
-    def get_term_id_list(self, use_cache=600) -> List[Tuple[int, str]]:
+        self.http_get(
+            "http://www.elearning.shu.edu.cn/setcookie.jsp", params=params)
+
+    @cache(600)
+    def get_term_id_list(self, disable_cache=False) -> List[Tuple[int, str]]:
         """获取学期id
         @return [(20193, "2019-2020学年春季学期"), (20192, "2019-2020学年秋季学期"), ...]
         """
-        cache_key = "term_id_list"
-        if t := self._read_cache(cache_key, expire_time=use_cache):
-            self._logger.info("get_term_id_list use cache value.")
-            return t
         # step 1 获取请求url
-        r = self.http_get("http://i.mooc.elearning.shu.edu.cn/space/index.shtml", referer="http://www.elearning.shu.edu.cn/portal")
-        url = extract_string(r.text, "http://www.elearning.shu.edu.cn/courselist/study?s=")
+        r = self.http_get("http://i.mooc.elearning.shu.edu.cn/space/index.shtml",
+                          referer="http://www.elearning.shu.edu.cn/portal")
+        url = extract_string(
+            r.text, "http://www.elearning.shu.edu.cn/courselist/study?s=")
         self._logger.info(f"get_term_id_list request url: {url}")
         # step 2
         result = list()
         r = self.http_get(url)
         html = lxml.etree.HTML(r.text)
-        term_list_li = html.xpath("//ul[@class='zse_ul']/li[@class='zse_li']/a")
+        term_list_li = html.xpath(
+            "//ul[@class='zse_ul']/li[@class='zse_li']/a")
         for x in term_list_li:
             year = x.xpath("@data_year")[0]
             term = x.xpath("@data_term")[0]
@@ -156,22 +202,20 @@ class ChaoxingUser:
             result.append((term_id, comment))
         result.sort(key=lambda x: x[0], reverse=True)
         self._logger.info(f"term_id: {result}")
-        self._write_cache(cache_key, result)
         return result
 
-    def get_course_list(self, term_id: int=-1, use_cache: int=600) -> List[CourseInfo]:
+    @cache(600)
+    def get_course_list(self, term_id: int = -1, disable_cache=False) -> List[CourseInfo]:
         """获取课程列表
         @params term_id 学期ID，-1表示当前学期, 0表示所有课程。20193表示2019-2020春季学期。
 
         @return [CourseInfo(pageUrl='', courseName='', teacherName='', courseSeq=''), ...]
         """
-        cache_key = "course_list_" + str(term_id)
-        if t := self._read_cache(cache_key, expire_time=use_cache):
-            self._logger.info("get_course_list use cache value.")
-            return t
         # step 1 获取请求url
-        r = self.http_get("http://i.mooc.elearning.shu.edu.cn/space/index.shtml", referer="http://www.elearning.shu.edu.cn/portal")
-        url = extract_string(r.text, "http://www.elearning.shu.edu.cn/courselist/study?s=")
+        r = self.http_get("http://i.mooc.elearning.shu.edu.cn/space/index.shtml",
+                          referer="http://www.elearning.shu.edu.cn/portal")
+        url = extract_string(
+            r.text, "http://www.elearning.shu.edu.cn/courselist/study?s=")
         self._logger.info(f"get_course_list request url: {url}")
 
         # step 2
@@ -198,21 +242,18 @@ class ChaoxingUser:
         for c in courses:
             course_list.append(CourseInfo(
                 pageUrl=c.xpath("a/@href")[0],
-                courseName=c.xpath("dl/dt[@name='courseNameHtml']")[0].text.strip(),
-                teacherName=c.xpath("dl/dd[@name='userNameHtml']")[0].text.strip(),
+                courseName=c.xpath(
+                    "dl/dt[@name='courseNameHtml']")[0].text.strip(),
+                teacherName=c.xpath(
+                    "dl/dd[@name='userNameHtml']")[0].text.strip(),
                 courseSeq=c.xpath("dl/dt/span/text()")[0].strip()[1:-1]
             ))
-        self._write_cache(cache_key, course_list)
         return course_list
 
-    def get_work_list(self, page_url, use_cache=600) -> List[WorkInfo]:
+    @cache(600)
+    def get_work_list(self, page_url, disable_cache=False) -> List[WorkInfo]:
         """获取作业列表
         """
-        # 注意此处：如果缓存结果为 [] 的话，也应该使用。
-        cache_key = "work_list_" + page_url
-        if (t := self._read_cache(cache_key, expire_time=use_cache)) is not None:
-            self._logger.info("get_work_list use cache value")
-            return t
         result = list()
         r = self.http_get(page_url)
         # step 1 获取url
@@ -231,24 +272,27 @@ class ChaoxingUser:
             time_format = r"%Y-%m-%d %H:%M"
             startTime = datetime.strptime(t[0], time_format) if t[0] else None
             endTime = datetime.strptime(t[1], time_format) if t[1] else None
-            workStatus = x.xpath("div[@class='titTxt']/span/strong")[0].text.strip()
+            workStatus = x.xpath(
+                "div[@class='titTxt']/span/strong")[0].text.strip()
             result.append(WorkInfo(
                 workName=workName,
                 startTime=startTime,
                 endTime=endTime,
                 workStatus=workStatus
             ))
-        self._write_cache(cache_key, result)
         return result
 
-    def get_unfinish_work_list(self, term_id=-1, use_cache=600):
+    @cache(600)
+    def get_unfinish_work_list(self, term_id=-1, disable_cache=False):
         """获取未完成作业。即状态为：待做
         @return [(CourseInfo, [WorkInfo, ...]), ...]
         """
-        course_list = self.get_course_list(term_id=term_id, use_cache=use_cache)
+        course_list = self.get_course_list(
+            term_id=term_id, disable_cache=disable_cache)
         result = list()
         for course in course_list:
-            work_list = self.get_work_list(course.pageUrl, use_cache=use_cache)
+            work_list = self.get_work_list(
+                course.pageUrl, disable_cache=disable_cache)
             unfinish_works = [x for x in work_list if x.workStatus == "待做"]
             if unfinish_works:
                 result.append((course, unfinish_works))
@@ -258,7 +302,7 @@ class ChaoxingUser:
         self._logger.debug(f"dump object to {file_path}")
         with open(file_path, "wb") as f:
             pickle.dump(self, f)
-    
+
     @staticmethod
     def load_from(file_path):
         with open(file_path, "rb") as f:
