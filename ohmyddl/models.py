@@ -76,6 +76,8 @@ class ChaoxingUser:
         self.session.headers.update(self.HTTP_HEADERS)
         self._logger = logging.getLogger(__name__)
         self._cache_table: Dict[str, Tuple[List, float]] = dict()
+        # 如果该对象是通过load_from产生的，load_file 为其来源文件，否则 load_from 为空。
+        self.load_file = ""
 
     def http_request(self, url, method, params=None, data=None, referer=None, auto_retry=3) -> requests.models.Response:
         session = self.session
@@ -298,7 +300,11 @@ class ChaoxingUser:
                 result.append((course, unfinish_works))
         return result
 
-    def dump_to(self, file_path):
+    def dump_to(self, file_path=None):
+        if file_path is None:
+            file_path = self.load_file
+        if file_path is None:
+            raise ValueError("need param file_path")
         self._logger.debug(f"dump object to {file_path}")
         with open(file_path, "wb") as f:
             pickle.dump(self, f)
@@ -306,4 +312,6 @@ class ChaoxingUser:
     @staticmethod
     def load_from(file_path):
         with open(file_path, "rb") as f:
-            return pickle.load(f)
+            obj = pickle.load(f)
+            obj.load_file = file_path
+            return obj
