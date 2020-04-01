@@ -1,6 +1,7 @@
-from typing import List
+import random
+import string
 from io import StringIO
-
+from typing import List
 
 # ---------------------------------------------
 
@@ -141,3 +142,16 @@ def fetch_term_desc(term_id_list, term_id):
         if term[0] == term_id:
             return term[1]
     return "未知"
+
+# -----------------------------------------------
+
+def geanerate_sid():
+    """生成随机32字节小写字母。例如：ruzztvxjrptwryccrrgdbyuzkoozfgua
+    """
+    return ''.join([random.choice(string.ascii_lowercase) for x in range(32)])
+
+
+def check_sid_format(sid):
+    if sid is not None and isinstance(sid, str) and len(sid) == 32 and sid.isalpha():
+        return True
+    return False
