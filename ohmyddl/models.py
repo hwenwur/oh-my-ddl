@@ -144,7 +144,8 @@ class ChaoxingUser:
             r = self.http_post("https://oauth.shu.edu.cn/login", data=form)
             if "认证失败" in r.text:
                 raise PasswordError
-
+            if "连续出错次数太多" in r.text:
+                raise LoginFailedError(2, "连续出错次数太多")
             if not r.url.startswith("http://www.elearning.shu.edu.cn/sso/logind"):
                 raise LoginFailedError(2, f"unexpected url(2): {r.url}")
         else:
