@@ -17,6 +17,10 @@ upload: dist
 	proxychains4 twine upload dist/*
 
 
+cloc:
+	cloc ./ --not-match-f=bottle.py --exclude-dir=build,dist,temp
+
+
 clean:
 	find . -type f -name '*.py[co]' -delete
 	find . -type d -name '__pycache__' -delete
