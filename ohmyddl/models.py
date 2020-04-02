@@ -54,6 +54,7 @@ def cache(expire_time):
                 self._logger.debug(f"call {func.__name__}...")
                 r = func(self, *vargs, **kwargs)
                 self._write_cache(key, r)
+                self.last_update_time = time.time()
                 return r
         wrap.origin = func
         return wrap
@@ -78,6 +79,7 @@ class ChaoxingUser:
         self._cache_table: Dict[str, Tuple[List, float]] = dict()
         # 如果该对象是通过load_from产生的，load_file 为其来源文件，否则 load_from 为空。
         self.load_file = ""
+        self.last_update_time = 0
 
     def http_request(self, url, method, params=None, data=None, referer=None, auto_retry=3) -> requests.models.Response:
         session = self.session
