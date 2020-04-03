@@ -4,7 +4,7 @@ import random
 import string
 from pathlib import Path
 
-from bottle import hook, post, request, response, run, route, static_file
+from .bottle import hook, post, request, response, run, route, static_file
 
 from . import DATA_DIR, exceptions
 from .models import ChaoxingUser
@@ -19,6 +19,7 @@ _ret_code = {
     -1: "unknown error"
 }
 logger = logging.getLogger(__name__)
+web_root = (Path(__file__).parent.parent / Path("web")).resolve()
 
 
 def setup_logging(level=logging.ERROR):
@@ -209,17 +210,18 @@ def logout():
 # static file
 @route("/")
 def home():
-    return static_file("index.html", root="./web")
+    logger.debug(f"webroot: {web_root}")
+    return static_file("index.html", root=web_root)
 
 
 @route("/<filename>")
 def resource_file(filename):
-    return static_file(filename, root="./web")
+    return static_file(filename, root=web_root)
 
 
 @route("/static/<filepath:path>")
 def resource_file2(filepath):
-    return static_file(filepath, root="./web/static")
+    return static_file(filepath, root=(web_root / Path("static")))
 
 
 def main(host="localhost", port=5986):
