@@ -310,6 +310,7 @@ class ChaoxingUser:
             raise ValueError("need param file_path")
         self._logger.debug(f"dump object to {file_path}")
         with open(file_path, "wb") as f:
+            del self._logger
             pickle.dump(self, f)
 
     @staticmethod
@@ -317,4 +318,6 @@ class ChaoxingUser:
         with open(file_path, "rb") as f:
             obj = pickle.load(f)
             obj.load_file = file_path
+            if not hasattr(obj, "_logger"):
+                obj._logger = logging.getLogger(__name__)
             return obj
