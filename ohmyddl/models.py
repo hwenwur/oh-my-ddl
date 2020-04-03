@@ -310,6 +310,9 @@ class ChaoxingUser:
             raise ValueError("need param file_path")
         self._logger.debug(f"dump object to {file_path}")
         with open(file_path, "wb") as f:
+            # 你问我为啥要删掉 _logger?
+            # 我也不知道。反正不删的话在 python3.6 中会报错 TypeError: can't pickle _thread.RLock objects。
+            # 大概是因为 pickle 不能序列化 Logger 里的 _thread.Rlock 对象吧。
             del self._logger
             pickle.dump(self, f)
 
