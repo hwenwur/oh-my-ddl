@@ -5,7 +5,7 @@ run:
 	python -m ohmyddl -v
 
 
-tar: clean
+tar: 
 	tar --exclude=".git" --exclude=".gitignore" --exclude-from=".gitignore" -cvf source.tar.gz ./
 
 
