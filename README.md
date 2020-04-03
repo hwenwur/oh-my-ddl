@@ -3,7 +3,7 @@
 ## 使用方法
 
 ### 安装
-python版本：3.7+
+python版本：3.6+
 ```bash
 pip install ohmyddl --user
 ```
