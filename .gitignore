@@ -3,6 +3,7 @@ __pycache__
 .user_data
 .vscode
 *.tar
+*.tar.gz
 temp
 dist
 *.egg-info
