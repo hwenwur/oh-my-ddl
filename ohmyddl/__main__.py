@@ -103,5 +103,12 @@ def main():
     save_user_data(user)
 
 
+def web():
+    from . import server
+    import webbrowser
+    webbrowser.open("http://localhost:5986/")
+    server.main()
+
+
 if __name__ == "__main__":
     main()

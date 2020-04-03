@@ -4,7 +4,7 @@ import random
 import string
 from pathlib import Path
 
-from bottle import hook, post, request, response, run
+from bottle import hook, post, request, response, run, route, static_file
 
 from . import DATA_DIR, exceptions
 from .models import ChaoxingUser
@@ -169,15 +169,22 @@ def get_unfinish_works():
     if request.json and ("disable_cache" in request.json.keys()): #pylint: disable=no-member
         disable_cache = request.json["disable_cache"] #pylint: disable=unsubscriptable-object
     user = request.user
-    course_list = user.get_course_list(disable_cache=disable_cache)
+    course_list = user.get_unfinish_work_list(disable_cache=disable_cache)
     result = {"ret": 0}
     data = []
-    for x in course_list:
-        data.append({
-            "courseName": x.courseName,
-            "workName": x.teacherName,
-            "deadline": x.courseSeq
-        })
+    for course, works in course_list:
+        for w in works:
+            deadline = w.endTime
+            if deadline is None:
+                deadline = -1
+            else:
+                deadline = deadline.timestamp()
+            data.append({
+                "courseName": course.courseName,
+                "workName": w.workName,
+                "deadline": deadline
+            })
+    data.sort(key=lambda x: x["deadline"])
     result["data"] = data
     result["update_at"] = user.last_update_time
     return result
@@ -197,6 +204,22 @@ def logout():
         "ret": 0,
         "message": _ret_code[0]
     }
+
+
+# static file
+@route("/")
+def home():
+    return static_file("index.html", root="./web")
+
+
+@route("/<filename>")
+def resource_file(filename):
+    return static_file(filename, root="./web")
+
+
+@route("/static/<filepath:path>")
+def resource_file2(filepath):
+    return static_file(filepath, root="./web/static")
 
 
 def main(host="localhost", port=5986):

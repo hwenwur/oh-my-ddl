@@ -27,7 +27,9 @@ setuptools.setup(
     ],
     entry_points={
         "console_scripts":[
-            "ohmyddl=ohmyddl.__main__:main"
+            "ohmyddl-cli=ohmyddl.__main__:main",
+            "ohmyddl=ohmyddl.__main__:web"
         ]
-    }
+    },
+    include_package_data=True,
 )
