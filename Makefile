@@ -6,7 +6,7 @@ run:
 
 
 tar: clean
-	tar --exclude=".git" --exclude=".gitignore" --exclude-from=".gitignore" -cvf source.tar ./
+	tar --exclude=".git" --exclude=".gitignore" --exclude-from=".gitignore" -cvf source.tar.gz ./
 
 
 dist: clean
@@ -18,7 +18,7 @@ upload: dist
 
 
 cloc:
-	cloc ./ --not-match-f=bottle.py --exclude-dir=build,dist,temp
+	cloc ./ --not-match-f=bottle.py --exclude-dir=build,dist,temp,web
 
 
 clean:
