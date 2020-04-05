@@ -1,7 +1,14 @@
 import random
 import string
+import sys
+import threading
 from io import StringIO
+from pathlib import Path
 from typing import List
+
+import requests
+
+from . import DATA_DIR
 
 # ---------------------------------------------
 
@@ -155,3 +162,34 @@ def check_sid_format(sid):
     if sid is not None and isinstance(sid, str) and len(sid) == 32 and sid.isalpha():
         return True
     return False
+
+
+# -----------------------------------------------
+
+def check_available(blocking=False):
+    """判断本程序是否可用。只有得到服务器明确回应后才关闭。
+    """
+    def print_message():
+        print("=============================")
+        print("      本程序不再开放使用        ")
+        print("=============================")
+
+    file = DATA_DIR / Path("disable")
+    if file.exists():
+        print_message()
+        sys.exit(0)
+
+    if not blocking:
+        t = threading.Thread(target=check_available, args=(True, ))
+        t.start()
+        return
+    url = "http://api.qiren.org/ohmyddl/can_i_use"
+    try:
+        r = requests.get(url)
+        if r.status_code == 200 and r.text == "no":
+            with file.open("a"):
+                pass
+            print_message()
+            sys.exit(0)
+    except:
+        pass

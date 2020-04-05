@@ -8,10 +8,11 @@ from pathlib import Path
 from . import DATA_DIR
 from .exceptions import PasswordError
 from .models import ChaoxingUser, CourseInfo, WorkInfo
-from .utils import fetch_term_desc, get_course_alias, table
+from .utils import fetch_term_desc, get_course_alias, table, check_available
 
 DATA_FILE = DATA_DIR / ".user_data"
 logger = logging.getLogger(__name__)
+check_available()
 
 
 def setup_logging(level=logging.ERROR):
