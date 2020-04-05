@@ -1,42 +1,52 @@
 # 超星学习通 deadline 汇总，目前仅适用于上海大学
 
+## 环境
+python版本：3.6+
+
 ## 使用方法
+- Windows
 
 ### 安装
-python版本：3.6+
 ```bash
-pip install ohmyddl --user
+pip install ohmyddl
 ```
+
 ### 运行
-- Windows
-```
-# 正常运行
+```bash
 ohmyddl.exe
+```
+如果浏览器窗口没有自动打开，可在地址栏输入：http://localhost:5986/
 
-# 输出调试信息
-ohmyddl.exe -v
-
-# 输出帮助信息
-ohmyddl.exe -h
+### 命令行（可选）
+```bash
+ohmyddl-cli.exe -h
 ```
 
-如果提示找不到命令可将上述 `ohmyddl.exe` 替换成 `python -m ohmyddl`。
+### 移除
+```bash
+pip uninstall ohmyddl
+```
 
 - Linux
+
+### 安装
+```bash
+pip3 install ohmyddl --user
 ```
-# 正常运行
+### 运行
+```bash
+# 正常运行（web）
+# 如果浏览器窗口没有自动打开，可在地址栏输入：http://localhost:5986/
 ohmyddl
 
-# 输出调试信息
-ohmyddl -v
-
-# 输出帮助信息
-ohmyddl -h
+# 命令行
+ohmyddl-cli -h
 ```
 
-如果提示找不到命令可将上述 `ohmyddl` 替换成 `python -m ohmyddl` 。
-
-必要的时候使用 `pip3` 和 `python3` 而不是 `pip` ,  `python`。
+### 移除
+```bash
+pip3 uninstall ohmyddl
+```
 
 ## 反馈
 
