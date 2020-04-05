@@ -19,7 +19,7 @@ _ret_code = {
     -1: "unknown error"
 }
 logger = logging.getLogger(__name__)
-web_root = (Path(__file__).parent.parent / Path("web")).resolve()
+web_root = (Path(__file__).parent / Path("webroot")).resolve()
 
 
 def setup_logging(level=logging.ERROR):

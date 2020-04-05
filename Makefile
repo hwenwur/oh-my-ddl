@@ -14,7 +14,7 @@ dist: clean
 
 
 upload: dist
-	proxychains4 twine upload dist/*
+	proxychains4 twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
 
 cloc:

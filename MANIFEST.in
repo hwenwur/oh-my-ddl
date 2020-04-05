@@ -1,1 +1,1 @@
-include web/*
+recursive-include ohmyddl/webroot *
