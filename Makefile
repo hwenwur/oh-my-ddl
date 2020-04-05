@@ -18,7 +18,7 @@ upload: dist
 
 
 cloc:
-	cloc ./ --not-match-f=bottle.py --exclude-dir=build,dist,temp,web
+	cloc ./ --not-match-f=bottle.py --exclude-dir=build,dist,temp,webroot
 
 
 clean:
