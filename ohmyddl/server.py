@@ -129,7 +129,7 @@ def login():
             randstr = geanerate_sid()
             file = DATA_DIR / Path(randstr)
             user.dump_to(file)
-            response.set_cookie("sid", randstr)
+            response.set_cookie("sid", randstr, max_age=100 * 24 * 60 * 60)
             return make_response(0)
         except exceptions.PasswordError:
             ret = 2
