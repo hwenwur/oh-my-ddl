@@ -166,6 +166,25 @@ def check_sid_format(sid):
 
 # -----------------------------------------------
 
+def get_user_id():
+    file = DATA_DIR / Path("userid")
+    if file.exists() and file.is_file():
+        with file.open("r", encoding="utf-8") as fd:
+            uid = fd.read()
+            if len(uid) == 32:
+                return uid
+    elif not file.exists():
+        # 这里使用和 sid 相同的格式
+        uid = geanerate_sid()
+        with file.open("w", encoding="utf-8") as fd:
+            fd.write(uid)
+        return uid
+    else:
+        # 其他情况，userid是一个文件夹等。当作用户不想被统计。
+        pass
+    return None
+
+
 def check_available(blocking=False):
     """判断本程序是否可用。只有得到服务器明确回应后才关闭。
     """
@@ -184,8 +203,11 @@ def check_available(blocking=False):
         t.start()
         return
     url = "http://api.qiren.org/ohmyddl/can_i_use"
+    # wumingshi - 无名氏
+    uid = get_user_id() or "wumingshi"
+    params = { "uid":  uid}
     try:
-        r = requests.get(url)
+        r = requests.get(url, params=params)
         if r.status_code == 200 and r.text == "no":
             with file.open("a"):
                 pass
