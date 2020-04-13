@@ -17,6 +17,10 @@ upload: dist
 	proxychains4 twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
 
+exe: dist
+	./pyinstaller/run.sh
+
+
 cloc:
 	cloc ./ --not-match-f=bottle.py --exclude-dir=build,dist,temp,webroot
 

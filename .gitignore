@@ -9,3 +9,5 @@ dist
 *.egg-info
 build
 ohmyddl/webroot
+*.spec
+*.whl
