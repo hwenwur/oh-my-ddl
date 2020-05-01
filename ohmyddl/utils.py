@@ -4,7 +4,8 @@ import sys
 import threading
 from io import StringIO
 from pathlib import Path
-from typing import List
+from typing import List, Dict
+import urllib.parse as urlparse
 
 import requests
 
@@ -149,6 +150,21 @@ def fetch_term_desc(term_id_list, term_id):
         if term[0] == term_id:
             return term[1]
     return "未知"
+
+
+def get_params_from_url(url) -> Dict[str, str]:
+    """从 url 中获取参数，如有重复键只保留首个。
+
+    url = "https://example.com/api?a=b&b=2&b=3"
+
+    返回 {"a": "1", "b": "2"}
+    """
+    parsed = urlparse.urlparse(url)
+    params = urlparse.parse_qs(parsed.query)
+    # params = {'a': ['aaa'], 'b': ['bbb']}
+    for x in params.keys():
+        params[x] = params[x][0]
+    return params
 
 # -----------------------------------------------
 
