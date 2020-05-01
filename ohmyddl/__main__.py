@@ -53,7 +53,7 @@ def save_user_data(user):
     user.dump_to(str(DATA_FILE))
 
 
-def main():
+def cli():
     prog = "ohmyddl.exe" if sys.platform == "win32" else "ohmyddl"
     parser = argparse.ArgumentParser(description="超星学习通作业汇总。", prog=prog)
     parser.add_argument("-c", help="不使用已保存学号", action="store_true")
@@ -109,6 +109,10 @@ def web():
     import webbrowser
     webbrowser.open("http://localhost:5986/")
     server.main()
+
+
+def main():
+    cli()
 
 
 if __name__ == "__main__":
