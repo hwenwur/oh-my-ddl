@@ -2,19 +2,24 @@ import functools
 import logging
 import pickle
 import time
+import re
 from collections import namedtuple
 from datetime import datetime
-from inspect import getfullargspec
 from typing import Dict, List, Tuple
 
 import lxml.etree
 import requests
 
 from .exceptions import LoginFailedError, PasswordError
-from .utils import extract_string
+from .utils import extract_string, get_params_from_url
+from . import __version__
 
 WorkInfo = namedtuple(
-    "WorkInfo", ["workName", "startTime", "endTime", "workStatus"])
+    "WorkInfo",
+    [
+        "workName", "startTime", "endTime", "workStatus",
+        "courseId", "classId", "workRelationId", "workRelationAnswerId", "workReEdit", "enc", "cpi"
+    ])
 CourseInfo = namedtuple(
     "CourseInfo", ["pageUrl", "courseName", "teacherName", "courseSeq"])
 
@@ -33,6 +38,7 @@ def cache(expire_time):
 
     在上述例子中，执行10次get_val(1, 2, 3)只消耗约1秒时间。
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrap(self, *vargs, **kwargs):
@@ -56,8 +62,10 @@ def cache(expire_time):
                 self._write_cache(key, r)
                 self.last_update_time = time.time()
                 return r
+
         wrap.origin = func
         return wrap
+
     return decorator
 
 
@@ -70,8 +78,8 @@ class ChaoxingUser:
     }
     CACHE_EXPIRE_TIME = 600
 
-    def __init__(self, userName, password):
-        self.userName = userName
+    def __init__(self, username, password):
+        self.userName = username
         self.password = password
         self.session = requests.Session()
         self.session.headers.update(self.HTTP_HEADERS)
@@ -80,6 +88,7 @@ class ChaoxingUser:
         # 如果该对象是通过load_from产生的，load_file 为其来源文件，否则 load_from 为空。
         self.load_file = ""
         self.last_update_time = 0
+        self.version = __version__
 
     def http_request(self, url, method, params=None, data=None, referer=None, auto_retry=3) -> requests.models.Response:
         session = self.session
@@ -98,8 +107,8 @@ class ChaoxingUser:
                     raise
                 if auto_retry > 0:
                     time.sleep(1)
-                    auto_retry -= 1
                     self._logger.error(f"自动重试: {auto_retry}")
+                    auto_retry -= 1
                 else:
                     raise
 
@@ -236,7 +245,6 @@ class ChaoxingUser:
             request_data["year"] = str(term_id // 10)
             request_data["term"] = str(term_id % 10)
         elif term_id != 0:
-            self._logger.error(f"invalid term_id: {term_id}")
             raise ValueError(f"invalid term_id: {term_id}")
         self._logger.debug(f"get_course_list term_id: {term_id}")
 
@@ -265,25 +273,75 @@ class ChaoxingUser:
         request_path = extract_string(r.text, "/work/getAllWork?")
         request_url = "http://mooc1.elearning.shu.edu.cn" + request_path
         self._logger.info(f"get_work_list request_url: {request_url}")
+
+        query_data = get_params_from_url(request_url)
+        classId = query_data["classId"]
+        courseId = query_data["courseId"]
+        cpi = query_data["cpi"]
+
         # step 2
         r = self.http_get(request_url)
+        # 获取参数 enc
+        # r.text 有如下一段，从里面提取参数 enc.
+        # 注意，这个 enc 和 request_url 里面的 enc 并不一致。
+        """
+        url = "/work/doHomeWorkNew?courseId=" + courseId + "&classId=" + classId + "&workId=" + workRelationId + "&workAnswerId="
+					+ workRelationAnswerId + "&isdisplaytable=2&mooc=1&enc=f7b9e17b6c978b006dea24fcc54cbbe7&workSystem=0&cpi=64590381&standardEnc=";
+			} else if (redit == 1) {
+				url = "/work/doHomeWorkNew?courseId=" + courseId + "&classId=" + classId + "&workId=" + workRelationId + "&workAnswerId=" 
+					+ workRelationAnswerId + "&reEdit=1&isdisplaytable=2&mooc=1&enc=f7b9e17b6c978b006dea24fcc54cbbe7&workSystem=0&cpi=64590381&standardEnc=";
+			}
+        """
+        enc = None
+        try:
+            temp = r.text.index("/work/doHomeWorkNew")
+            substr = r.text[temp:temp + 500]
+            enc_list = re.findall("&enc=(.*?)&", substr)
+            if enc_list:
+                enc = enc_list[0]
+        except ValueError as e:
+            self._logger.debug(f"获取 enc 失败：{e}")
+        # 获取 enc 完成
+
         html = lxml.etree.HTML(r.text)
         works = html.xpath("//div[@class='ulDiv']/ul/li")
         self._logger.info(f"get_work_list len(works) = {len(works)}")
         for x in works:
-            workName = x.xpath("div[@class='titTxt']/p/a/@title")[0]
+            work_name = x.xpath("div[@class='titTxt']/p/a/@title")[0]
+            # 处理时间
+            # t[0] - startTime, t[1] - endTime
             t = x.xpath("div[@class='titTxt']/span[@class='pt5']/text()")
+            # 去除空格
             t = [i.strip() for i in t]
             time_format = r"%Y-%m-%d %H:%M"
-            startTime = datetime.strptime(t[0], time_format) if t[0] else None
-            endTime = datetime.strptime(t[1], time_format) if t[1] else None
-            workStatus = x.xpath(
+            start_time = datetime.strptime(t[0], time_format) if t[0] else None
+            end_tim = datetime.strptime(t[1], time_format) if t[1] else None
+            # 作业状态
+            work_status = x.xpath(
                 "div[@class='titTxt']/span/strong")[0].text.strip()
+
+            work_action_button = x.xpath(".//span[contains(text(), '做作业')]/..")
+            work_relation_id = None
+            work_relation_answer_id = None
+            work_re_edit = None
+            if work_action_button:
+                work_action_button = work_action_button[0]
+                work_relation_id = work_action_button.attrib.get("data")
+                work_relation_answer_id = work_action_button.attrib.get("data")
+                work_re_edit = work_action_button.attrib.get("data3")
+
             result.append(WorkInfo(
-                workName=workName,
-                startTime=startTime,
-                endTime=endTime,
-                workStatus=workStatus
+                workName=work_name,
+                startTime=start_time,
+                endTime=end_tim,
+                workStatus=work_status,
+                courseId=courseId,
+                classId=classId,
+                workRelationId=work_relation_id,
+                workRelationAnswerId=work_relation_answer_id,
+                workReEdit=work_re_edit,
+                enc=enc,
+                cpi=cpi
             ))
         return result
 
@@ -298,10 +356,20 @@ class ChaoxingUser:
         for course in course_list:
             work_list = self.get_work_list(
                 course.pageUrl, disable_cache=disable_cache)
-            unfinish_works = [x for x in work_list if x.workStatus == "待做"]
-            if unfinish_works:
-                result.append((course, unfinish_works))
+            unfinished_works = [x for x in work_list if x.workStatus == "待做"]
+            if unfinished_works:
+                result.append((course, unfinished_works))
         return result
+
+    def get_work_content(self, work: WorkInfo):
+        """获取作业内容
+        """
+        # http://mooc1.elearning.shu.edu.cn/work/doHomeWorkNew?courseId=211119975&classId=23686971&workId=8011957&workAnswerId=19772052&isdisplaytable=2&mooc=1&enc=f7b9e17b6c978b006dea24fcc54cbbe7&workSystem=0&cpi=64590381&standardEnc=eb5f5c7cc2cb712a40b2a83370e07b73
+        # TODO
+        r = self.http_get(
+            "http://mooc1.elearning.shu.edu.cn/work/isExpire?classId=23686971&workRelationId=8011957&cpi=64590381&courseId=211119975")
+        request_url = f"http://mooc1.elearning.shu.edu.cn/work/doHomeWorkNew?courseId={work.courseId}&classId={work.classId}&workId={work.workRelationId}&workAnswerId={work.workRelationAnswerId}&isdisplaytable=2&mooc=1&enc={work.enc}&workSystem=0&cpi={work.cpi}&standardEnc={1}"
+        pass
 
     def dump_to(self, file_path=None):
         if file_path is None:
@@ -310,9 +378,7 @@ class ChaoxingUser:
             raise ValueError("need param file_path")
         self._logger.debug(f"dump object to {file_path}")
         with open(file_path, "wb") as f:
-            # 你问我为啥要删掉 _logger?
-            # 我也不知道。反正不删的话在 python3.6 中会报错 TypeError: can't pickle _thread.RLock objects。
-            # 大概是因为 pickle 不能序列化 Logger 里的 _thread.Rlock 对象吧。
+            # 避开 python3.6 的一个 bug, 参考：https://bugs.python.org/issue30520
             del self._logger
             pickle.dump(self, f)
 

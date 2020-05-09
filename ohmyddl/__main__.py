@@ -3,11 +3,10 @@ import logging
 import sys
 from datetime import datetime
 from getpass import getpass
-from pathlib import Path
 
 from . import DATA_DIR
 from .exceptions import PasswordError
-from .models import ChaoxingUser, CourseInfo, WorkInfo
+from .models import ChaoxingUser
 from .utils import fetch_term_desc, get_course_alias, table, check_available
 
 DATA_FILE = DATA_DIR / ".user_data"
@@ -54,7 +53,7 @@ def save_user_data(user):
 
 
 def cli():
-    prog = "ohmyddl.exe" if sys.platform == "win32" else "ohmyddl"
+    prog = "ohmyddl.exe" if "win32" == sys.platform else "ohmyddl"
     parser = argparse.ArgumentParser(description="超星学习通作业汇总。", prog=prog)
     parser.add_argument("-c", help="不使用已保存学号", action="store_true")
     parser.add_argument(
@@ -85,11 +84,11 @@ def cli():
     for course_name in work_list.keys():
         course_alias = get_course_alias(course_name)
         works = work_list[course_name]
-        unfinish_works = [x for x in works if x.workStatus == "待做"]
-        if len(unfinish_works) == 0:
+        unfinished_works = [x for x in works if x.workStatus == "待做"]
+        if len(unfinished_works) == 0:
             no_work_course.append(course_alias)
             continue
-        for work in unfinish_works:
+        for work in unfinished_works:
             tab_content.append([
                 course_alias + "-" + work.workName,
                 work.endTime if work.endTime is not None else "未知"
@@ -105,10 +104,10 @@ def cli():
 
 
 def web():
-    from . import server
-    import webbrowser
-    webbrowser.open("http://localhost:5986/")
-    server.main()
+    from . import gui
+    gui.main()
+    # webbrowser.open("http://localhost:5986/")
+    # server.main()
 
 
 def main():

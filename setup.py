@@ -2,14 +2,11 @@ import setuptools
 import ohmyddl
 import pathlib
 
-
 with open("README.md", "r", encoding="utf-8") as file:
     long_description = file.read()
 
-
 webroot = pathlib.Path("ohmyddl/webroot")
 webroot_data = [str(x)[8:] for x in webroot.glob("**/*")]
-
 
 setuptools.setup(
     name="ohmyddl",
@@ -32,13 +29,13 @@ setuptools.setup(
         "requests",
     ],
     entry_points={
-        "console_scripts":[
+        "console_scripts": [
             "ohmyddl-cli=ohmyddl.__main__:cli",
             "ohmyddl=ohmyddl.__main__:web"
         ]
     },
     include_package_data=True,
-    package_data = {
+    package_data={
         "ohmyddl": webroot_data
     }
 )
