@@ -6,13 +6,17 @@ import re
 from collections import namedtuple
 from datetime import datetime
 from typing import Dict, List, Tuple
+from pathlib import Path
 
 import lxml.etree
 import requests
 
-from .exceptions import LoginFailedError, PasswordError
+from .exceptions import LoginFailedError, PasswordError, TryTooManyError
 from .utils import extract_string, get_params_from_url
 from . import __version__
+from . import DATA_DIR
+from .cachemanager import make_cache_decorator
+
 
 WorkInfo = namedtuple(
     "WorkInfo",
@@ -23,57 +27,61 @@ WorkInfo = namedtuple(
 CourseInfo = namedtuple(
     "CourseInfo", ["pageUrl", "courseName", "teacherName", "courseSeq"])
 
+cache = make_cache_decorator(DATA_DIR / Path("cache_data.db"))
 
-def cache(expire_time):
-    """缓存函数返回值。在expire_time时间内重复调用某个函数（且str(参数)相同）会使用上次的返回值。
-    @expire_time 缓存过期时间，单位：秒。
-
-    例子：\n
-    @cache(60)\n
-    def get_val(x, y, z):
-        # something
-        time.sleep(1)
-        return [x, y, z]
-    如果在60s内，重复调用该函数，并且x,y,z值相同的情况下，会直接使用上次运行的返回值。
-
-    在上述例子中，执行10次get_val(1, 2, 3)只消耗约1秒时间。
-    """
-
-    def decorator(func):
-        @functools.wraps(func)
-        def wrap(self, *vargs, **kwargs):
-            if "disable_cache" in kwargs.keys():
-                disable_cache = kwargs["disable_cache"]
-            else:
-                disable_cache = False
-            key = func.__name__
-            for x in vargs:
-                key += str(x)
-            for x in kwargs.keys():
-                key += str(x)
-                key += str(kwargs[x])
-            cache = self._read_cache(key, expire_time=expire_time)
-            if (not disable_cache) and (cache is not None):
-                self._logger.debug(f"{func.__name__} 使用缓存值。key: {key}")
-                return cache
-            else:
-                self._logger.debug(f"call {func.__name__}...")
-                r = func(self, *vargs, **kwargs)
-                self._write_cache(key, r)
-                self.last_update_time = time.time()
-                return r
-
-        wrap.origin = func
-        return wrap
-
-    return decorator
+#
+# def cache_legacy(expire_time):
+#     """缓存函数返回值。在expire_time时间内重复调用某个函数（且str(参数)相同）会使用上次的返回值。
+#     @expire_time 缓存过期时间，单位：秒。
+#
+#     例子：\n
+#     @cache(60)\n
+#     def get_val(x, y, z):
+#         # something
+#         time.sleep(1)
+#         return [x, y, z]
+#     如果在60s内，重复调用该函数，并且x,y,z值相同的情况下，会直接使用上次运行的返回值。
+#
+#     在上述例子中，执行10次get_val(1, 2, 3)只消耗约1秒时间。
+#     """
+#
+#     def decorator(func):
+#         @functools.wraps(func)
+#         def wrap(self, *vargs, **kwargs):
+#             if "disable_cache" in kwargs.keys():
+#                 disable_cache = kwargs["disable_cache"]
+#             else:
+#                 disable_cache = False
+#             key = func.__name__
+#             for x in vargs:
+#                 key += str(x)
+#             for x in kwargs.keys():
+#                 key += str(x)
+#                 key += str(kwargs[x])
+#             cache = self._read_cache(key, expire_time=expire_time)
+#             if (not disable_cache) and (cache is not None):
+#                 self._logger.debug(f"{func.__name__} 使用缓存值。key: {key}")
+#                 return cache
+#             else:
+#                 self._logger.debug(f"call {func.__name__}...")
+#                 r = func(self, *vargs, **kwargs)
+#                 self._write_cache(key, r)
+#                 self.last_update_time = time.time()
+#                 return r
+#
+#         wrap.origin = func
+#         return wrap
+#
+#     return decorator
 
 
 class ChaoxingUser:
     HTTP_HEADERS = {
         # dummy user-agent
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13) AppleWebKit/603.1.13 (KHTML, like Gecko) Version/10.1 Safari/603.1.13',
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13) AppleWebKit/603.1.13 (KHTML, like Gecko) '
+                      'Version/10.1 Safari/603.1.13',
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,"
+                  "application/signed-exchange;v=b3;q=0.9",
         "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7"
     }
     CACHE_EXPIRE_TIME = 600
@@ -156,7 +164,7 @@ class ChaoxingUser:
             if "认证失败" in r.text:
                 raise PasswordError
             if "连续出错次数太多" in r.text:
-                raise LoginFailedError(2, "连续出错次数太多")
+                raise TryTooManyError("登录失败次数太多")
             if not r.url.startswith("http://www.elearning.shu.edu.cn/sso/logind"):
                 raise LoginFailedError(2, f"unexpected url(2): {r.url}")
         else:
@@ -187,7 +195,7 @@ class ChaoxingUser:
         self.http_get(
             "http://www.elearning.shu.edu.cn/setcookie.jsp", params=params)
 
-    @cache(600)
+    @cache(86400)
     def get_term_id_list(self, disable_cache=False) -> List[Tuple[int, str]]:
         """获取学期id
         @return [(20193, "2019-2020学年春季学期"), (20192, "2019-2020学年秋季学期"), ...]
@@ -218,7 +226,7 @@ class ChaoxingUser:
         self._logger.info(f"term_id: {result}")
         return result
 
-    @cache(600)
+    @cache(86400)
     def get_course_list(self, term_id: int = -1, disable_cache=False) -> List[CourseInfo]:
         """获取课程列表
         @params term_id 学期ID，-1表示当前学期, 0表示所有课程。20193表示2019-2020春季学期。
@@ -275,8 +283,8 @@ class ChaoxingUser:
         self._logger.info(f"get_work_list request_url: {request_url}")
 
         query_data = get_params_from_url(request_url)
-        classId = query_data["classId"]
-        courseId = query_data["courseId"]
+        class_id = query_data["classId"]
+        course_id = query_data["courseId"]
         cpi = query_data["cpi"]
 
         # step 2
@@ -286,11 +294,11 @@ class ChaoxingUser:
         # 注意，这个 enc 和 request_url 里面的 enc 并不一致。
         """
         url = "/work/doHomeWorkNew?courseId=" + courseId + "&classId=" + classId + "&workId=" + workRelationId + "&workAnswerId="
-					+ workRelationAnswerId + "&isdisplaytable=2&mooc=1&enc=f7b9e17b6c978b006dea24fcc54cbbe7&workSystem=0&cpi=64590381&standardEnc=";
-			} else if (redit == 1) {
-				url = "/work/doHomeWorkNew?courseId=" + courseId + "&classId=" + classId + "&workId=" + workRelationId + "&workAnswerId=" 
-					+ workRelationAnswerId + "&reEdit=1&isdisplaytable=2&mooc=1&enc=f7b9e17b6c978b006dea24fcc54cbbe7&workSystem=0&cpi=64590381&standardEnc=";
-			}
+                + workRelationAnswerId + "&isdisplaytable=2&mooc=1&enc=f7b9e17b6c978b006dea24fcc54cbbe7&workSystem=0&cpi=64590381&standardEnc=";
+            } else if (redit == 1) {
+                url = "/work/doHomeWorkNew?courseId=" + courseId + "&classId=" + classId + "&workId=" + workRelationId + "&workAnswerId=" 
+                    + workRelationAnswerId + "&reEdit=1&isdisplaytable=2&mooc=1&enc=f7b9e17b6c978b006dea24fcc54cbbe7&workSystem=0&cpi=64590381&standardEnc=";
+            }
         """
         enc = None
         try:
@@ -335,8 +343,8 @@ class ChaoxingUser:
                 startTime=start_time,
                 endTime=end_tim,
                 workStatus=work_status,
-                courseId=courseId,
-                classId=classId,
+                courseId=course_id,
+                classId=class_id,
                 workRelationId=work_relation_id,
                 workRelationAnswerId=work_relation_answer_id,
                 workReEdit=work_re_edit,
@@ -360,16 +368,6 @@ class ChaoxingUser:
             if unfinished_works:
                 result.append((course, unfinished_works))
         return result
-
-    def get_work_content(self, work: WorkInfo):
-        """获取作业内容
-        """
-        # http://mooc1.elearning.shu.edu.cn/work/doHomeWorkNew?courseId=211119975&classId=23686971&workId=8011957&workAnswerId=19772052&isdisplaytable=2&mooc=1&enc=f7b9e17b6c978b006dea24fcc54cbbe7&workSystem=0&cpi=64590381&standardEnc=eb5f5c7cc2cb712a40b2a83370e07b73
-        # TODO
-        r = self.http_get(
-            "http://mooc1.elearning.shu.edu.cn/work/isExpire?classId=23686971&workRelationId=8011957&cpi=64590381&courseId=211119975")
-        request_url = f"http://mooc1.elearning.shu.edu.cn/work/doHomeWorkNew?courseId={work.courseId}&classId={work.classId}&workId={work.workRelationId}&workAnswerId={work.workRelationAnswerId}&isdisplaytable=2&mooc=1&enc={work.enc}&workSystem=0&cpi={work.cpi}&standardEnc={1}"
-        pass
 
     def dump_to(self, file_path=None):
         if file_path is None:
