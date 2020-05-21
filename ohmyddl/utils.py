@@ -141,6 +141,7 @@ def table(data: List[List[str]], header: List[str]):
 
 # -----------------------------------------------
 
+
 def fetch_term_desc(term_id_list, term_id):
     if term_id == -1:
         return term_id_list[0][1]
@@ -167,6 +168,7 @@ def get_params_from_url(url) -> Dict[str, str]:
     return params
 
 # -----------------------------------------------
+
 
 def geanerate_sid():
     """生成随机32字节小写字母。例如：ruzztvxjrptwryccrrgdbyuzkoozfgua
