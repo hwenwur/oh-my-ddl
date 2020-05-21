@@ -8,3 +8,9 @@ class LoginFailedError(RuntimeError):
     """登录失败
     """
     pass
+
+
+class TryTooManyError(RuntimeError):
+    """登录尝试次数过多
+    """
+    pass
