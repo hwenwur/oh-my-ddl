@@ -20,8 +20,8 @@ def setup_logging(level=logging.ERROR):
     root.setLevel(level)
 
 
-def solve_account(relogin=False) -> ChaoxingUser:
-    if (not relogin) and DATA_FILE.exists():
+def solve_account(re_login=False) -> ChaoxingUser:
+    if (not re_login) and DATA_FILE.exists():
         logging.debug(f"read config from {DATA_FILE}")
         user = ChaoxingUser.load_from(str(DATA_FILE))
     else:
@@ -67,7 +67,7 @@ def cli():
     else:
         setup_logging()
 
-    user = solve_account(relogin=args.c)
+    user = solve_account(re_login=args.c)
     term_id = args.t if args.t else -1
     disable_cache = args.f
     logger.info(f"disable_cache: {disable_cache}")
@@ -104,10 +104,10 @@ def cli():
 
 
 def web():
-    from . import gui
-    gui.main()
-    # webbrowser.open("http://localhost:5986/")
-    # server.main()
+    import webbrowser
+    from . import server
+    webbrowser.open("http://localhost:5986/")
+    server.main()
 
 
 def main():
