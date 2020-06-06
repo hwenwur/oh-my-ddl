@@ -112,8 +112,8 @@ def login():
     message = ""
     try:
         payload = request.json
-        username = payload["username"] #pylint: disable=unsubscriptable-object
-        password = payload["password"] #pylint: disable=unsubscriptable-object
+        username = payload["username"]  # pylint: disable=unsubscriptable-object
+        password = payload["password"]  # pylint: disable=unsubscriptable-object
         message = ""
     except KeyError as e:
         username = password = None
