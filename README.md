@@ -50,4 +50,4 @@ pip3 uninstall ohmyddl
 
 ## 反馈
 
-- 邮箱： github@qiren.org
+- 邮箱：hwenwur@qq.com
