@@ -12,7 +12,7 @@ setuptools.setup(
     name="ohmyddl",
     version=ohmyddl.__version__,
     author="hwenwur",
-    author_email="pypi@qiren.org",
+    author_email="hwenwur@qq.com",
     description="A tool to collect deadline in SHU.",
     long_description=long_description,
     long_description_content_type="text/markdown",
